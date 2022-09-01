@@ -3,6 +3,8 @@ package provider
 import (
 	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/go-cty/cty"
+
+	"github.com/auth0/terraform-provider-auth0/internal/value"
 )
 
 func flattenTenantChangePassword(changePassword *management.TenantChangePassword) []interface{} {
@@ -137,33 +139,37 @@ func expandTenantErrorPage(d ResourceData) *management.TenantErrorPage {
 func expandTenantFlags(flagsList cty.Value) *management.TenantFlags {
 	var tenantFlags *management.TenantFlags
 
+	List(d, "flags").Elem(func(d ResourceData) {
+
+	})
+	// maybe we need check to ensure value is not nil before iterating on it?
 	flagsList.ForEachElement(func(_ cty.Value, flags cty.Value) (stop bool) {
 		tenantFlags = &management.TenantFlags{
-			EnableClientConnections:            Flag(flags, "enable_client_connections"),
-			EnableAPIsSection:                  Flag(flags, "enable_apis_section"),
-			EnablePipeline2:                    Flag(flags, "enable_pipeline2"),
-			EnableDynamicClientRegistration:    Flag(flags, "enable_dynamic_client_registration"),
-			EnableCustomDomainInEmails:         Flag(flags, "enable_custom_domain_in_emails"),
-			UniversalLogin:                     Flag(flags, "universal_login"),
-			EnableLegacyLogsSearchV2:           Flag(flags, "enable_legacy_logs_search_v2"),
-			DisableClickjackProtectionHeaders:  Flag(flags, "disable_clickjack_protection_headers"),
-			EnablePublicSignupUserExistsError:  Flag(flags, "enable_public_signup_user_exists_error"),
-			UseScopeDescriptionsForConsent:     Flag(flags, "use_scope_descriptions_for_consent"),
-			AllowLegacyDelegationGrantTypes:    Flag(flags, "allow_legacy_delegation_grant_types"),
-			AllowLegacyROGrantTypes:            Flag(flags, "allow_legacy_ro_grant_types"),
-			AllowLegacyTokenInfoEndpoint:       Flag(flags, "allow_legacy_tokeninfo_endpoint"),
-			EnableLegacyProfile:                Flag(flags, "enable_legacy_profile"),
-			EnableIDTokenAPI2:                  Flag(flags, "enable_idtoken_api2"),
-			NoDisclosureEnterpriseConnections:  Flag(flags, "no_disclose_enterprise_connections"),
-			DisableManagementAPISMSObfuscation: Flag(flags, "disable_management_api_sms_obfuscation"),
-			EnableADFSWAADEmailVerification:    Flag(flags, "enable_adfs_waad_email_verification"),
-			RevokeRefreshTokenGrant:            Flag(flags, "revoke_refresh_token_grant"),
-			DashboardLogStreams:                Flag(flags, "dashboard_log_streams_next"),
-			DashboardInsightsView:              Flag(flags, "dashboard_insights_view"),
-			DisableFieldsMapFix:                Flag(flags, "disable_fields_map_fix"),
+			EnableClientConnections:            value.Bool(flags.GetAttr("enable_client_connections")),
+			EnableAPIsSection:                  value.Bool(flags.GetAttr("enable_apis_section")),
+			EnablePipeline2:                    value.Bool(flags.GetAttr("enable_pipeline2")),
+			EnableDynamicClientRegistration:    value.Bool(flags.GetAttr("enable_dynamic_client_registration")),
+			EnableCustomDomainInEmails:         value.Bool(flags.GetAttr("enable_custom_domain_in_emails")),
+			UniversalLogin:                     value.Bool(flags.GetAttr("universal_login")),
+			EnableLegacyLogsSearchV2:           value.Bool(flags.GetAttr("enable_legacy_logs_search_v2")),
+			DisableClickjackProtectionHeaders:  value.Bool(flags.GetAttr("disable_clickjack_protection_headers")),
+			EnablePublicSignupUserExistsError:  value.Bool(flags.GetAttr("enable_public_signup_user_exists_error")),
+			UseScopeDescriptionsForConsent:     value.Bool(flags.GetAttr("use_scope_descriptions_for_consent")),
+			AllowLegacyDelegationGrantTypes:    value.Bool(flags.GetAttr("allow_legacy_delegation_grant_types")),
+			AllowLegacyROGrantTypes:            value.Bool(flags.GetAttr("allow_legacy_ro_grant_types")),
+			AllowLegacyTokenInfoEndpoint:       value.Bool(flags.GetAttr("allow_legacy_tokeninfo_endpoint")),
+			EnableLegacyProfile:                value.Bool(flags.GetAttr("enable_legacy_profile")),
+			EnableIDTokenAPI2:                  value.Bool(flags.GetAttr("enable_idtoken_api2")),
+			NoDisclosureEnterpriseConnections:  value.Bool(flags.GetAttr("no_disclose_enterprise_connections")),
+			DisableManagementAPISMSObfuscation: value.Bool(flags.GetAttr("disable_management_api_sms_obfuscation")),
+			EnableADFSWAADEmailVerification:    value.Bool(flags.GetAttr("enable_adfs_waad_email_verification")),
+			RevokeRefreshTokenGrant:            value.Bool(flags.GetAttr("revoke_refresh_token_grant")),
+			DashboardLogStreams:                value.Bool(flags.GetAttr("dashboard_log_streams_next")),
+			DashboardInsightsView:              value.Bool(flags.GetAttr("dashboard_insights_view")),
+			DisableFieldsMapFix:                value.Bool(flags.GetAttr("disable_fields_map_fix")),
 		}
 
-		return stop
+		return stop // return true to keep going, false to stop iteration
 	})
 
 	return tenantFlags
@@ -184,12 +190,19 @@ func expandTenantUniversalLogin(d ResourceData) *management.TenantUniversalLogin
 	return &universalLogin
 }
 
-func expandTenantSessionCookie(d ResourceData) *management.TenantSessionCookie {
-	var sessionCookie management.TenantSessionCookie
+func expandTenantSessionCookie(sessionCookieList cty.Value) *management.TenantSessionCookie {
+	var sessionCookie *management.TenantSessionCookie
 
-	List(d, "session_cookie").Elem(func(d ResourceData) {
-		sessionCookie.Mode = String(d, "mode")
+	// maybe we need check to ensure value is not nil before iterating on it?
+	// in case the API doesn't return it and also the config doesn't have the field set
+	// we need to double-check this scenario and in other places where situation is similar
+	sessionCookieList.ForEachElement(func(_ cty.Value, cookie cty.Value) (stop bool) {
+		sessionCookie = &management.TenantSessionCookie{
+			Mode: value.String(cookie.GetAttr("mode")),
+		}
+
+		return stop // return true to keep going, false to stop iteration
 	})
 
-	return &sessionCookie
+	return sessionCookie
 }
