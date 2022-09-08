@@ -5,8 +5,10 @@ import (
 
 	"github.com/auth0/go-auth0"
 	"github.com/auth0/go-auth0/management"
+	"github.com/auth0/terraform-provider-auth0/internal/values"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/structure"
 )
 
@@ -559,12 +561,12 @@ func flattenConnectionOptionsSAML(d ResourceData, options *management.Connection
 	return m, nil
 }
 
-func expandConnection(d ResourceData) (*management.Connection, diag.Diagnostics) {
+func expandConnection(d *schema.ResourceData) (*management.Connection, diag.Diagnostics) {
 	connection := &management.Connection{
 		Name:               String(d, "name", IsNewResource()),
 		DisplayName:        String(d, "display_name"),
 		Strategy:           String(d, "strategy", IsNewResource()),
-		IsDomainConnection: Bool(d, "is_domain_connection"),
+		IsDomainConnection: values.Bool(d.GetRawConfig().GetAttr("is_domain_connection")),
 		EnabledClients:     Set(d, "enabled_clients").List(),
 		Realms:             Slice(d, "realms", IsNewResource(), HasChange()),
 	}
@@ -578,7 +580,7 @@ func expandConnection(d ResourceData) (*management.Connection, diag.Diagnostics)
 
 	var diagnostics diag.Diagnostics
 	strategy := d.Get("strategy").(string)
-	showAsButton := Bool(d, "show_as_button")
+	showAsButton := values.Bool(d.GetRawConfig().GetAttr("show_as_button"))
 	List(d, "options").Elem(func(d ResourceData) {
 		switch strategy {
 		case management.ConnectionStrategyAuth0:

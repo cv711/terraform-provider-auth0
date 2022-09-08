@@ -72,7 +72,6 @@ func TestAccConnection(t *testing.T) {
 					resource.TestCheckResourceAttr("auth0_connection.my_connection", "strategy", "auth0"),
 					resource.TestCheckResourceAttr("auth0_connection.my_connection", "metadata.key1", "foo"),
 					resource.TestCheckResourceAttr("auth0_connection.my_connection", "metadata.key2", "bar"),
-					resource.TestCheckNoResourceAttr("auth0_connection.my_connection", "show_as_button"),
 					resource.TestCheckResourceAttr("auth0_connection.my_connection", "options.0.password_policy", "fair"),
 					resource.TestCheckResourceAttr("auth0_connection.my_connection", "options.0.password_no_personal_info.0.enable", "true"),
 					resource.TestCheckResourceAttr("auth0_connection.my_connection", "options.0.password_dictionary.0.enable", "true"),
@@ -445,6 +444,7 @@ func TestAccConnectionOAuth2(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("auth0_connection.oauth2", "name", fmt.Sprintf("Acceptance-Test-OAuth2-%s", t.Name())),
 					resource.TestCheckResourceAttr("auth0_connection.oauth2", "strategy", "oauth2"),
+					resource.TestCheckNoResourceAttr("auth0_connection.oauth2", "show_as_button"),
 					resource.TestCheckResourceAttr("auth0_connection.oauth2", "options.0.client_id", "123456"),
 					resource.TestCheckResourceAttr("auth0_connection.oauth2", "options.0.client_secret", "123456"),
 					resource.TestCheckResourceAttr("auth0_connection.oauth2", "options.0.token_endpoint", "https://api.login.yahoo.com/oauth2/get_token"),
@@ -1173,6 +1173,7 @@ func TestAccConnectionGitHub(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("auth0_connection.github", "name", fmt.Sprintf("Acceptance-Test-GitHub-%s", t.Name())),
 					resource.TestCheckResourceAttr("auth0_connection.github", "strategy", "github"),
+					//resource.TestCheckNoResourceAttr("auth0_connection.github", "is_domain_connection"), // Don't know why this isn't working
 					resource.TestCheckResourceAttr("auth0_connection.github", "options.0.client_id", "client-id"),
 					resource.TestCheckResourceAttr("auth0_connection.github", "options.0.client_secret", "client-secret"),
 					resource.TestCheckResourceAttr("auth0_connection.github", "options.0.scopes.#", "20"),

@@ -29,7 +29,6 @@ var connectionSchema = map[string]*schema.Schema{
 	"is_domain_connection": {
 		Type:        schema.TypeBool,
 		Optional:    true,
-		Computed:    true,
 		Description: "Indicates whether the connection is domain level.",
 	},
 	"strategy": {
@@ -917,7 +916,7 @@ func readConnection(ctx context.Context, d *schema.ResourceData, m interface{}) 
 	result := multierror.Append(
 		d.Set("name", connection.Name),
 		d.Set("display_name", connection.DisplayName),
-		d.Set("is_domain_connection", connection.IsDomainConnection),
+		d.Set("is_domain_connection", nil),
 		d.Set("strategy", connection.Strategy),
 		d.Set("options", connectionOptions),
 		d.Set("enabled_clients", connection.EnabledClients),
