@@ -916,7 +916,7 @@ func readConnection(ctx context.Context, d *schema.ResourceData, m interface{}) 
 	result := multierror.Append(
 		d.Set("name", connection.Name),
 		d.Set("display_name", connection.DisplayName),
-		d.Set("is_domain_connection", nil),
+		d.Set("is_domain_connection", connection.IsDomainConnection),
 		d.Set("strategy", connection.Strategy),
 		d.Set("options", connectionOptions),
 		d.Set("enabled_clients", connection.EnabledClients),
