@@ -29,7 +29,6 @@ var connectionSchema = map[string]*schema.Schema{
 	"is_domain_connection": {
 		Type:        schema.TypeBool,
 		Optional:    true,
-		Computed:    true,
 		Description: "Indicates whether the connection is domain level.",
 	},
 	"strategy": {

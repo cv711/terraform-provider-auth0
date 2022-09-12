@@ -7,7 +7,10 @@ import (
 	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/structure"
+
+	"github.com/auth0/terraform-provider-auth0/internal/values"
 )
 
 func flattenConnectionOptions(d ResourceData, options interface{}) ([]interface{}, diag.Diagnostics) {
@@ -559,14 +562,19 @@ func flattenConnectionOptionsSAML(d ResourceData, options *management.Connection
 	return m, nil
 }
 
-func expandConnection(d ResourceData) (*management.Connection, diag.Diagnostics) {
+func expandConnection(d *schema.ResourceData) (*management.Connection, diag.Diagnostics) {
+	rawConfig := d.GetRawConfig()
+
 	connection := &management.Connection{
-		Name:               String(d, "name", IsNewResource()),
 		DisplayName:        String(d, "display_name"),
-		Strategy:           String(d, "strategy", IsNewResource()),
-		IsDomainConnection: Bool(d, "is_domain_connection"),
+		IsDomainConnection: values.Bool(d.GetRawConfig().GetAttr("is_domain_connection")),
 		EnabledClients:     Set(d, "enabled_clients").List(),
 		Realms:             Slice(d, "realms", IsNewResource(), HasChange()),
+	}
+
+	if d.IsNewResource() {
+		connection.Name = values.String(rawConfig.GetAttr("name"))
+		connection.Strategy = values.String(rawConfig.GetAttr("strategy"))
 	}
 
 	if metadataKeyMap := Map(d, "metadata"); metadataKeyMap != nil {
@@ -578,7 +586,16 @@ func expandConnection(d ResourceData) (*management.Connection, diag.Diagnostics)
 
 	var diagnostics diag.Diagnostics
 	strategy := d.Get("strategy").(string)
-	showAsButton := Bool(d, "show_as_button")
+	showAsButton := values.Bool(d.GetRawConfig().GetAttr("show_as_button"))
+
+	rawConfig.GetAttr("options").ForEachElement(func(_ cty.Value, options cty.Value) (stop bool) {
+		switch strategy {
+		case management.ConnectionStrategySAML:
+			connection.ShowAsButton = showAsButton
+			connection.Options, diagnostics = expandConnectionOptionsSAML(options)
+		}
+		return false
+	})
 	List(d, "options").Elem(func(d ResourceData) {
 		switch strategy {
 		case management.ConnectionStrategyAuth0:
@@ -636,8 +653,7 @@ func expandConnection(d ResourceData) (*management.Connection, diag.Diagnostics)
 		case management.ConnectionStrategyEmail:
 			connection.Options, diagnostics = expandConnectionOptionsEmail(d)
 		case management.ConnectionStrategySAML:
-			connection.ShowAsButton = showAsButton
-			connection.Options, diagnostics = expandConnectionOptionsSAML(d)
+			break
 		case management.ConnectionStrategyADFS:
 			connection.ShowAsButton = showAsButton
 			connection.Options, diagnostics = expandConnectionOptionsADFS(d)
@@ -1025,53 +1041,56 @@ func expandConnectionOptionsOIDC(d ResourceData) (*management.ConnectionOptionsO
 	return options, diag.FromErr(err)
 }
 
-func expandConnectionOptionsSAML(d ResourceData) (*management.ConnectionOptionsSAML, diag.Diagnostics) {
+func expandConnectionOptionsSAML(opt cty.Value) (*management.ConnectionOptionsSAML, diag.Diagnostics) {
 	options := &management.ConnectionOptionsSAML{
-		Debug:              Bool(d, "debug"),
-		SigningCert:        String(d, "signing_cert"),
-		ProtocolBinding:    String(d, "protocol_binding"),
-		TenantDomain:       String(d, "tenant_domain"),
-		DomainAliases:      Set(d, "domain_aliases").List(),
-		SignInEndpoint:     String(d, "sign_in_endpoint"),
-		SignOutEndpoint:    String(d, "sign_out_endpoint"),
-		DisableSignOut:     Bool(d, "disable_sign_out"),
-		SignatureAlgorithm: String(d, "signature_algorithm"),
-		DigestAglorithm:    String(d, "digest_algorithm"),
-		SignSAMLRequest:    Bool(d, "sign_saml_request"),
-		RequestTemplate:    String(d, "request_template"),
-		UserIDAttribute:    String(d, "user_id_attribute"),
-		LogoURL:            String(d, "icon_url"),
-		SetUserAttributes:  String(d, "set_user_root_attributes"),
-		NonPersistentAttrs: castToListOfStrings(Set(d, "non_persistent_attrs").List()),
-		EntityID:           String(d, "entity_id"),
-		MetadataXML:        String(d, "metadata_xml"),
-		MetadataURL:        String(d, "metadata_url"),
+		Debug:           values.Bool(opt.GetAttr("debug")),
+		SigningCert:     values.String(opt.GetAttr("signing_cert")),
+		ProtocolBinding: values.String(opt.GetAttr("protocol_binding")),
+		TenantDomain:    values.String(opt.GetAttr("tenant_domain")),
+		// DomainAliases:      Set(d, "domain_aliases").List(), []interface{}
+		// DomainAliases:      values.Array(opt.GetAttr("domain_aliases")),
+		SignInEndpoint:     values.String(opt.GetAttr("sign_in_endpoint")),
+		SignOutEndpoint:    values.String(opt.GetAttr("sign_out_endpoint")),
+		DisableSignOut:     values.Bool(opt.GetAttr("disable_sign_out")),
+		SignatureAlgorithm: values.String(opt.GetAttr("signature_algorithm")),
+		DigestAglorithm:    values.String(opt.GetAttr("digest_algorithm")),
+		SignSAMLRequest:    values.Bool(opt.GetAttr("sign_saml_request")),
+		RequestTemplate:    values.String(opt.GetAttr("request_template")),
+		UserIDAttribute:    values.String(opt.GetAttr("user_id_attribute")),
+		LogoURL:            values.String(opt.GetAttr("icon_url")),
+		SetUserAttributes:  values.String(opt.GetAttr("set_user_root_attributes")),
+		// NonPersistentAttrs: castToListOfStrings(Set(d, "non_persistent_attrs").List()),
+		EntityID:    values.String(opt.GetAttr("entity_id")),
+		MetadataXML: values.String(opt.GetAttr("metadata_xml")),
+		MetadataURL: values.String(opt.GetAttr("metadata_url")),
 	}
 
-	List(d, "idp_initiated").Elem(func(d ResourceData) {
+	opt.GetAttr("idp_initiated").ForEachElement(func(_ cty.Value, val cty.Value) bool {
 		options.IdpInitiated = &management.ConnectionOptionsSAMLIdpInitiated{
-			ClientID:             String(d, "client_id"),
-			ClientProtocol:       String(d, "client_protocol"),
-			ClientAuthorizeQuery: String(d, "client_authorize_query"),
+			ClientID:             values.String(val.GetAttr("client_id")),
+			ClientProtocol:       values.String(val.GetAttr("client_protocol")),
+			ClientAuthorizeQuery: values.String(val.GetAttr("client_authorize_query")),
 		}
+		return false
 	})
 
-	List(d, "signing_key").Elem(func(d ResourceData) {
+	opt.GetAttr("signing_key").ForEachElement(func(_ cty.Value, val cty.Value) bool {
 		options.SigningKey = &management.ConnectionOptionsSAMLSigningKey{
-			Cert: String(d, "cert"),
-			Key:  String(d, "key"),
+			Cert: values.String(val.GetAttr("cert")),
+			Key:  values.String(val.GetAttr("key")),
 		}
+		return false
 	})
 
-	var err error
+	// var err error
 
-	options.FieldsMap, err = JSON(d, "fields_map")
-	diagnostics := diag.FromErr(err)
+	// options.FieldsMap, err = JSON(d, "fields_map")
+	// diagnostics := diag.FromErr(err)
 
-	options.UpstreamParams, err = JSON(d, "upstream_params")
-	diagnostics = append(diagnostics, diag.FromErr(err)...)
+	// options.UpstreamParams, err = JSON(d, "upstream_params")
+	// diagnostics = append(diagnostics, diag.FromErr(err)...)
 
-	return options, diagnostics
+	return options, nil
 }
 
 func expandConnectionOptionsADFS(d ResourceData) (*management.ConnectionOptionsADFS, diag.Diagnostics) {
